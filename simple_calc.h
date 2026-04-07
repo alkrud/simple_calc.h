@@ -29,7 +29,6 @@ NUM_TYPE sc_calculate(const char *text, int len); // -1 for null terminated stri
 
 #define FUN(return_type, func_name, ...) return_type simple_calculator_##func_name(__VA_ARGS__)
 #define CAL(func_name, ...) simple_calculator_##func_name(__VA_ARGS__)
-#define ENUM(name) simple_calculator_enum_type_##name
 #define T(name) simple_calculator_##name
     
 #define sc_list_define(name, type) \
@@ -58,18 +57,18 @@ NUM_TYPE sc_calculate(const char *text, int len); // -1 for null terminated stri
     } while (0)
 
 typedef enum {
-    ENUM(NUM),
-    ENUM(PLUS),
-    ENUM(HYPHEN),
-    ENUM(STAR),
-    ENUM(SLASH),
-    ENUM(CARRET),
-    ENUM(LPAREN),
-    ENUM(RPAREN),
-    ENUM(SYMBOL),
-    ENUM(END),
-    ENUM(ERROR),
-    ENUM(COUNT),
+    SC_NUM,
+    SC_PLUS,
+    SC_HYPHEN,
+    SC_STAR,
+    SC_SLASH,
+    SC_CARRET,
+    SC_LPAREN,
+    SC_RPAREN,
+    SC_SYMBOL,
+    SC_END,
+    SC_ERROR,
+    SC_COUNT,
 } T(token_type);
 
 typedef struct {
@@ -133,7 +132,7 @@ FUN(T(token), tokenize_num, T(lexer) *lexer)
     }
 
     token.end = &lexer->text[lexer->current - 1];
-    token.type = ENUM(NUM);
+    token.type = SC_NUM;
 
     return token;
 }
@@ -148,7 +147,7 @@ FUN(T(token), tokenize_symbol, T(lexer) *lexer)
     }
 
     token.end = &lexer->text[lexer->current - 1];
-    token.type = ENUM(SYMBOL);
+    token.type = SC_SYMBOL;
 
     return token;
 }
@@ -156,7 +155,7 @@ FUN(T(token), tokenize_symbol, T(lexer) *lexer)
 FUN(T(token), tokenize_operator, T(lexer) *lexer)
 {
     T(token) token = {0};
-    token.type = ENUM(END);
+    token.type = SC_END;
 
     if (lexer->current >= lexer->text_len) return token;
 
@@ -165,34 +164,34 @@ FUN(T(token), tokenize_operator, T(lexer) *lexer)
     switch (CAL(lexer_peek, lexer)) {
         case '+':
             CAL(lexer_consume, lexer);
-            token.type = ENUM(PLUS);
+            token.type = SC_PLUS;
             break;
         case '-':
             CAL(lexer_consume, lexer);
-            token.type = ENUM(HYPHEN);
+            token.type = SC_HYPHEN;
             break;
         case '*':
             CAL(lexer_consume, lexer);
-            token.type = ENUM(STAR);
+            token.type = SC_STAR;
             break;
         case '/':
             CAL(lexer_consume, lexer);
-            token.type = ENUM(SLASH);
+            token.type = SC_SLASH;
             break;
         case '^':
             CAL(lexer_consume, lexer);
-            token.type = ENUM(CARRET);
+            token.type = SC_CARRET;
             break;
         case '(':
             CAL(lexer_consume, lexer);
-            token.type = ENUM(LPAREN);
+            token.type = SC_LPAREN;
             break;
         case ')':
             CAL(lexer_consume, lexer);
-            token.type = ENUM(RPAREN);
+            token.type = SC_RPAREN;
             break;
         default:
-            token.type = ENUM(ERROR);
+            token.type = SC_ERROR;
     }
 
     token.end = &lexer->text[lexer->current - 1];
@@ -215,7 +214,7 @@ FUN(T(token), lexer_next, T(lexer) *lexer)
         return (T(token)) {
             .begin = NULL,
             .end = NULL,
-            .type = ENUM(END),
+            .type = SC_END,
         };
     }
 
@@ -236,10 +235,10 @@ FUN(bool, tokenize, T(lexer) *lexer, T(token_list) *token_list)
 {
     T(token) token = {0};
 
-    while ((token = CAL(lexer_next, lexer)).type != ENUM(END)) {
+    while ((token = CAL(lexer_next, lexer)).type != SC_END) {
         sc_list_append(*token_list, token);
 
-        if (token.type == ENUM(ERROR)) return false;
+        if (token.type == SC_ERROR) return false;
     }
 
     sc_list_append(*token_list, token);
@@ -280,11 +279,11 @@ FUN(T(token), parser_prev, T(parser) *parser)
 }
 
 typedef enum {
-    ENUM(PREC_NONE),
-    ENUM(PREC_ADDSUB),
-    ENUM(PREC_MULDIV),
-    ENUM(PREC_POW),
-    ENUM(PREC_UNARY),
+    SC_PREC_NONE,
+    SC_PREC_ADDSUB,
+    SC_PREC_MULDIV,
+    SC_PREC_POW,
+    SC_PREC_UNARY,
 } T(precedence);
 
 typedef NUM_TYPE (*T(parse_fn))(T(parser)*);
@@ -301,18 +300,18 @@ FUN(NUM_TYPE, unary, T(parser) *parser);
 FUN(NUM_TYPE, grouping, T(parser) *parser);
 FUN(NUM_TYPE, identifier, T(parser) *parser);
 
-static const T(parse_rule) T(rules)[ENUM(COUNT)] = {
-    {T(num), NULL, ENUM(PREC_NONE)},
-    {T(unary), T(binary), ENUM(PREC_ADDSUB)},
-    {T(unary), T(binary), ENUM(PREC_ADDSUB)},
-    {NULL, T(binary), ENUM(PREC_MULDIV)},
-    {NULL, T(binary), ENUM(PREC_MULDIV)},
-    {NULL, T(binary), ENUM(PREC_POW)},
-    {T(grouping), NULL, ENUM(PREC_NONE)},
-    {NULL, NULL, ENUM(PREC_NONE)},
-    {T(identifier), NULL, ENUM(PREC_NONE)},
-    {NULL, NULL, ENUM(PREC_NONE)},
-    {NULL, NULL, ENUM(PREC_NONE)},
+static const T(parse_rule) T(rules)[SC_COUNT] = {
+    {T(num), NULL, SC_PREC_NONE},
+    {T(unary), T(binary), SC_PREC_ADDSUB},
+    {T(unary), T(binary), SC_PREC_ADDSUB},
+    {NULL, T(binary), SC_PREC_MULDIV},
+    {NULL, T(binary), SC_PREC_MULDIV},
+    {NULL, T(binary), SC_PREC_POW},
+    {T(grouping), NULL, SC_PREC_NONE},
+    {NULL, NULL, SC_PREC_NONE},
+    {T(identifier), NULL, SC_PREC_NONE},
+    {NULL, NULL, SC_PREC_NONE},
+    {NULL, NULL, SC_PREC_NONE},
 };
 
 FUN(T(parse_rule), get_rule, T(token) token)
@@ -326,7 +325,7 @@ FUN(NUM_TYPE, expression, T(parser) *parser, T(precedence) prec)
 
     T(token) token = CAL(parser_consume, parser);
 
-    if (token.type == ENUM(END)) {
+    if (token.type == SC_END) {
         fprintf(stderr, "ERROR: Expression isn't complete\n");
         parser->error = true;
         return 0;
@@ -356,11 +355,11 @@ FUN(NUM_TYPE, expression, T(parser) *parser, T(precedence) prec)
         NUM_TYPE right = rule.infix(parser);
 
         switch (token.type) {
-            case ENUM(PLUS) :  left = left + right; break;
-            case ENUM(HYPHEN): left = left - right; break;
-            case ENUM(STAR)  : left = left * right; break;
-            case ENUM(SLASH) : left = left / right; break;
-            case ENUM(CARRET): left = pow(left, right); break;
+            case SC_PLUS :  left = left + right; break;
+            case SC_HYPHEN: left = left - right; break;
+            case SC_STAR  : left = left * right; break;
+            case SC_SLASH : left = left / right; break;
+            case SC_CARRET: left = pow(left, right); break;
             default:
                 fprintf(stderr, "ERROR: Unknown token type: '%.*s'\n", TOKEN_LEN(token), token.begin);
                 parser->error = true;
@@ -395,14 +394,14 @@ FUN(NUM_TYPE, unary, T(parser) *parser)
     NUM_TYPE result = 0;
 
     switch (token.type) {
-        case ENUM(PLUS):
-            result = CAL(expression, parser, ENUM(PREC_UNARY));
+        case SC_PLUS:
+            result = CAL(expression, parser, SC_PREC_UNARY);
             if (result < 0) result *= -1;
             break;
-        case ENUM(HYPHEN):
-            result = -CAL(expression, parser, ENUM(PREC_UNARY));
+        case SC_HYPHEN:
+            result = -CAL(expression, parser, SC_PREC_UNARY);
             break;
-        case ENUM(END):
+        case SC_END:
             fprintf(stderr, "ERROR: Expression isn't complete\n");
             parser->error = true;
             break;
@@ -423,10 +422,10 @@ FUN(NUM_TYPE, grouping, T(parser) *parser)
 
     if (parser->error) return 0;
 
-    if (CAL(parser_consume, parser).type != ENUM(RPAREN)) {
+    if (CAL(parser_consume, parser).type != SC_RPAREN) {
         token = CAL(parser_prev, parser);
 
-        if (token.type == ENUM(END)) {
+        if (token.type == SC_END) {
             fprintf(stderr, "ERROR: Expresssion isn't complete\n"); 
         }
         else {
@@ -451,11 +450,11 @@ FUN(NUM_TYPE, parse, T(token_list) *token_list)
     if (token_list->count <= 1) return 0;
 
     T(parser) parser = CAL(parser_new, token_list);
-    NUM_TYPE result = CAL(expression, &parser, ENUM(PREC_NONE));
+    NUM_TYPE result = CAL(expression, &parser, SC_PREC_NONE);
 
     if (parser.error) {
         T(token) token = CAL(parser_prev, &parser);
-        if (token.type == ENUM(END)) {
+        if (token.type == SC_END) {
             fprintf(stderr, "ERROR: Parsing failed\n");
         }
         else {
