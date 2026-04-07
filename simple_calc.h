@@ -27,17 +27,6 @@ NUM_TYPE sc_calculate(const char *text, int len); // -1 for null terminated stri
     #define SC_FREE(ptr) free(ptr)
 #endif
 
-#define FUN(return_type, func_name, ...) return_type simple_calculator_##func_name(__VA_ARGS__)
-#define CAL(func_name, ...) simple_calculator_##func_name(__VA_ARGS__)
-#define T(name) simple_calculator_##name
-    
-#define sc_list_define(name, type) \
-    typedef struct {\
-        T(type) *items;\
-        size_t count;\
-        size_t capacity;\
-    } T(name)\
-
 #define sc_list_append(list, item)\
     do {\
         if ((list).count >= (list).capacity) {\
@@ -69,65 +58,82 @@ typedef enum {
     SC_END,
     SC_ERROR,
     SC_COUNT,
-} T(token_type);
+} SC_TokenType;
 
 typedef struct {
     const char *begin;
     const char *end;
-    T(token_type) type;
-} T(token);
+    SC_TokenType type;
+} SC_Token;
 
 #define TOKEN_LEN(token) ((int)((token).end - (token).begin + 1))
 
-sc_list_define(token_list, token);
+typedef struct {\
+    SC_Token *items;
+    size_t count;
+    size_t capacity;
+} SC_TokenList;
 
 typedef struct {
     const char *text;
     size_t text_len;
     size_t current;
-} T(lexer);
+} SC_Lexer;
 
-FUN(T(lexer), lexer_new, const char *text, size_t len) 
+SC_Lexer sc_lexer_new(const char *text, size_t len) 
 {
-    return (T(lexer)) {
+    return (SC_Lexer) {
         .text = text,
         .text_len = len,
         .current = 0,
     };
 }
 
-#define sc_is_alpha(c) (\
-    ((c) >= 'a' && (c) <= 'z') || \
-    ((c) >= 'A' && (c) <= 'Z') || \
-    ((c) == '_')\
-)
-#define sc_is_num(c) ((c) >= '0' && (c) <= '9')
-#define sc_is_alnum(c) (sc_is_alpha(c) || sc_is_num(c))
-#define sc_is_space(c) ((c) == ' ' || (c) == '\r' || (c) == '\t' || (c) == '\n')
+bool sc_is_alpha(char c)
+{
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+           (c == '_');
+}
 
-FUN(char, lexer_peek, T(lexer) *lexer)
+bool sc_is_num(char c)
+{
+    return c >= '0' && (c) <= '9';
+}
+
+bool sc_is_alnum(char c)
+{
+    return sc_is_alpha(c) || sc_is_num(c);
+}
+
+bool sc_is_space(char c)
+{
+    return c == ' ' || c == '\r' || c == '\t' || c == '\n';
+}
+
+char sc_lexer_peek(SC_Lexer *lexer)
 {
     return lexer->text[lexer->current];
 }
 
-FUN(char, lexer_consume, T(lexer) *lexer) 
+char sc_lexer_consume(SC_Lexer *lexer) 
 {
     return lexer->text[lexer->current++];
 }
 
-FUN(T(token), tokenize_num, T(lexer) *lexer)
+SC_Token sc_tokenize_num(SC_Lexer *lexer)
 {
-    T(token) token = {0};
+    SC_Token token = {0};
     token.begin = &lexer->text[lexer->current];
 
-    while (lexer->current < lexer->text_len && sc_is_num((CAL(lexer_peek, lexer)))) {
-        CAL(lexer_consume, lexer);
+    while (lexer->current < lexer->text_len && sc_is_num((sc_lexer_peek(lexer)))) {
+        sc_lexer_consume(lexer);
     }
 
-    if (lexer->current < lexer->text_len && CAL(lexer_peek, lexer) == '.') {
-        CAL(lexer_consume, lexer);
-        while (lexer->current < lexer->text_len && sc_is_num((CAL(lexer_peek, lexer)))) {
-            CAL(lexer_consume, lexer);
+    if (lexer->current < lexer->text_len && sc_lexer_peek(lexer) == '.') {
+        sc_lexer_consume(lexer);
+        while (lexer->current < lexer->text_len && sc_is_num((sc_lexer_peek(lexer)))) {
+            sc_lexer_consume(lexer);
         }
     }
 
@@ -137,13 +143,13 @@ FUN(T(token), tokenize_num, T(lexer) *lexer)
     return token;
 }
 
-FUN(T(token), tokenize_symbol, T(lexer) *lexer)
+SC_Token sc_tokenize_symbol(SC_Lexer *lexer)
 {
-    T(token) token = {0};
+    SC_Token token = {0};
     token.begin = &lexer->text[lexer->current];
 
-    while (lexer->current < lexer->text_len && sc_is_alnum(CAL(lexer_peek, lexer))) {
-        CAL(lexer_consume, lexer);
+    while (lexer->current < lexer->text_len && sc_is_alnum(sc_lexer_peek(lexer))) {
+        sc_lexer_consume(lexer);
     }
 
     token.end = &lexer->text[lexer->current - 1];
@@ -152,42 +158,42 @@ FUN(T(token), tokenize_symbol, T(lexer) *lexer)
     return token;
 }
 
-FUN(T(token), tokenize_operator, T(lexer) *lexer)
+SC_Token sc_tokenize_operator(SC_Lexer *lexer)
 {
-    T(token) token = {0};
+    SC_Token token = {0};
     token.type = SC_END;
 
     if (lexer->current >= lexer->text_len) return token;
 
     token.begin = &lexer->text[lexer->current];
 
-    switch (CAL(lexer_peek, lexer)) {
+    switch (sc_lexer_peek(lexer)) {
         case '+':
-            CAL(lexer_consume, lexer);
+            sc_lexer_consume(lexer);
             token.type = SC_PLUS;
             break;
         case '-':
-            CAL(lexer_consume, lexer);
+            sc_lexer_consume(lexer);
             token.type = SC_HYPHEN;
             break;
         case '*':
-            CAL(lexer_consume, lexer);
+            sc_lexer_consume(lexer);
             token.type = SC_STAR;
             break;
         case '/':
-            CAL(lexer_consume, lexer);
+            sc_lexer_consume(lexer);
             token.type = SC_SLASH;
             break;
         case '^':
-            CAL(lexer_consume, lexer);
+            sc_lexer_consume(lexer);
             token.type = SC_CARRET;
             break;
         case '(':
-            CAL(lexer_consume, lexer);
+            sc_lexer_consume(lexer);
             token.type = SC_LPAREN;
             break;
         case ')':
-            CAL(lexer_consume, lexer);
+            sc_lexer_consume(lexer);
             token.type = SC_RPAREN;
             break;
         default:
@@ -199,43 +205,43 @@ FUN(T(token), tokenize_operator, T(lexer) *lexer)
     return token;
 }
 
-FUN(void, trim_left, T(lexer) *lexer)
+void sc_trim_left(SC_Lexer *lexer)
 {
-    while (lexer->current < lexer->text_len && sc_is_space(CAL(lexer_peek, lexer))) {
-        CAL(lexer_consume, lexer);
+    while (lexer->current < lexer->text_len && sc_is_space(sc_lexer_peek(lexer))) {
+        sc_lexer_consume(lexer);
     }
 }
 
-FUN(T(token), lexer_next, T(lexer) *lexer)
+SC_Token sc_lexer_next(SC_Lexer *lexer)
 {
-    CAL(trim_left, lexer);
+    sc_trim_left(lexer);
 
     if (lexer->current >= lexer->text_len) {
-        return (T(token)) {
+        return (SC_Token) {
             .begin = NULL,
             .end = NULL,
             .type = SC_END,
         };
     }
 
-    char c = CAL(lexer_peek, lexer);
+    char c = sc_lexer_peek(lexer);
 
     if (sc_is_num(c)) {
-        return CAL(tokenize_num, lexer);
+        return sc_tokenize_num(lexer);
     }
     else if (sc_is_alpha(c)) {
-        return CAL(tokenize_symbol, lexer);
+        return sc_tokenize_symbol(lexer);
     }
     else {
-        return CAL(tokenize_operator, lexer);
+        return sc_tokenize_operator(lexer);
     }
 }
 
-FUN(bool, tokenize, T(lexer) *lexer, T(token_list) *token_list)
+bool sc_tokenize(SC_Lexer *lexer, SC_TokenList *token_list)
 {
-    T(token) token = {0};
+    SC_Token token = {0};
 
-    while ((token = CAL(lexer_next, lexer)).type != SC_END) {
+    while ((token = sc_lexer_next(lexer)).type != SC_END) {
         sc_list_append(*token_list, token);
 
         if (token.type == SC_ERROR) return false;
@@ -247,15 +253,15 @@ FUN(bool, tokenize, T(lexer) *lexer, T(token_list) *token_list)
 }
 
 typedef struct {
-    T(token_list) *tokens;
+    SC_TokenList *tokens;
     size_t current;
     NUM_TYPE ans;
     bool error;
-} T(parser);
+} SC_Parser;
 
-FUN(T(parser), parser_new, T(token_list) *token_list)
+SC_Parser sc_parser_new(SC_TokenList *token_list)
 {
-    return (T(parser)) {
+    return (SC_Parser) {
         .tokens = token_list,
         .current = 0,
         .ans = 0,
@@ -263,17 +269,17 @@ FUN(T(parser), parser_new, T(token_list) *token_list)
     };
 }
 
-FUN(T(token), parser_consume, T(parser) *parser)
+SC_Token sc_parser_consume(SC_Parser *parser)
 {
     return parser->tokens->items[parser->current++];
 }
 
-FUN(T(token), parser_peek, T(parser) *parser)
+SC_Token sc_parser_peek(SC_Parser *parser)
 {
     return parser->tokens->items[parser->current];
 }
 
-FUN(T(token), parser_prev, T(parser) *parser)
+SC_Token sc_parser_prev(SC_Parser *parser)
 {
     return parser->tokens->items[parser->current - 1];
 }
@@ -284,46 +290,46 @@ typedef enum {
     SC_PREC_MULDIV,
     SC_PREC_POW,
     SC_PREC_UNARY,
-} T(precedence);
+} SC_Precedence;
 
-typedef NUM_TYPE (*T(parse_fn))(T(parser)*);
+typedef NUM_TYPE (*SC_ParseFn)(SC_Parser*);
 
 typedef struct {
-    T(parse_fn) prefix;
-    T(parse_fn) infix;
+    SC_ParseFn prefix;
+    SC_ParseFn infix;
     int lbp;
-} T(parse_rule);
+} SC_ParseRule;
 
-FUN(NUM_TYPE, num, T(parser) *parser);
-FUN(NUM_TYPE, binary, T(parser) *parser);
-FUN(NUM_TYPE, unary, T(parser) *parser);
-FUN(NUM_TYPE, grouping, T(parser) *parser);
-FUN(NUM_TYPE, identifier, T(parser) *parser);
+NUM_TYPE sc_num(SC_Parser *parser);
+NUM_TYPE sc_binary(SC_Parser *parser);
+NUM_TYPE sc_unary(SC_Parser *parser);
+NUM_TYPE sc_grouping(SC_Parser *parser);
+NUM_TYPE sc_identifier(SC_Parser *parser);
 
-static const T(parse_rule) T(rules)[SC_COUNT] = {
-    {T(num), NULL, SC_PREC_NONE},
-    {T(unary), T(binary), SC_PREC_ADDSUB},
-    {T(unary), T(binary), SC_PREC_ADDSUB},
-    {NULL, T(binary), SC_PREC_MULDIV},
-    {NULL, T(binary), SC_PREC_MULDIV},
-    {NULL, T(binary), SC_PREC_POW},
-    {T(grouping), NULL, SC_PREC_NONE},
+static const SC_ParseRule SC_rules[SC_COUNT] = {
+    {sc_num, NULL, SC_PREC_NONE},
+    {sc_unary, sc_binary, SC_PREC_ADDSUB},
+    {sc_unary, sc_binary, SC_PREC_ADDSUB},
+    {NULL, sc_binary, SC_PREC_MULDIV},
+    {NULL, sc_binary, SC_PREC_MULDIV},
+    {NULL, sc_binary, SC_PREC_POW},
+    {sc_grouping, NULL, SC_PREC_NONE},
     {NULL, NULL, SC_PREC_NONE},
-    {T(identifier), NULL, SC_PREC_NONE},
+    {sc_identifier, NULL, SC_PREC_NONE},
     {NULL, NULL, SC_PREC_NONE},
     {NULL, NULL, SC_PREC_NONE},
 };
 
-FUN(T(parse_rule), get_rule, T(token) token)
+SC_ParseRule sc_get_rule(SC_Token token)
 {
-    return T(rules)[token.type];
+    return SC_rules[token.type];
 }
 
-FUN(NUM_TYPE, expression, T(parser) *parser, T(precedence) prec)
+NUM_TYPE sc_expression(SC_Parser *parser, SC_Precedence prec)
 {
     if (parser->error) return 0;
 
-    T(token) token = CAL(parser_consume, parser);
+    SC_Token token = sc_parser_consume(parser);
 
     if (token.type == SC_END) {
         fprintf(stderr, "ERROR: Expression isn't complete\n");
@@ -331,7 +337,7 @@ FUN(NUM_TYPE, expression, T(parser) *parser, T(precedence) prec)
         return 0;
     }
 
-    T(parse_rule) rule = CAL(get_rule, token);
+    SC_ParseRule rule = sc_get_rule(token);
 
     if (rule.prefix == NULL) {
         fprintf(stderr, "ERROR: token '%.*s' shouldn't be here\n", TOKEN_LEN(token), token.begin);
@@ -341,10 +347,10 @@ FUN(NUM_TYPE, expression, T(parser) *parser, T(precedence) prec)
 
     NUM_TYPE left = rule.prefix(parser);
 
-    while (parser->current < parser->tokens->count && (int)prec < CAL(get_rule, CAL(parser_peek, parser)).lbp) {
-        token = CAL(parser_consume, parser);
+    while (parser->current < parser->tokens->count && (int)prec < sc_get_rule(sc_parser_peek(parser)).lbp) {
+        token = sc_parser_consume(parser);
 
-        rule = CAL(get_rule, token);
+        rule = sc_get_rule(token);
 
         if (rule.infix == NULL) {
             fprintf(stderr, "ERROR: token '%.*s' shouldn't be here\n", TOKEN_LEN(token), token.begin);
@@ -370,9 +376,9 @@ FUN(NUM_TYPE, expression, T(parser) *parser, T(precedence) prec)
     return left;
 }
 
-FUN(NUM_TYPE, num, T(parser) *parser)
+NUM_TYPE sc_num(SC_Parser *parser)
 {
-    T(token) token = CAL(parser_prev, parser);
+    SC_Token token = sc_parser_prev(parser);
     char *endptr;
     char temp[TOKEN_LEN(token) + 1];
     sprintf(temp, "%.*s", TOKEN_LEN(token), token.begin);
@@ -380,26 +386,26 @@ FUN(NUM_TYPE, num, T(parser) *parser)
     return strtod(temp, &endptr);
 }
 
-FUN(NUM_TYPE, binary, T(parser) *parser)
+NUM_TYPE sc_binary(SC_Parser *parser)
 {
-    T(token) token = CAL(parser_prev, parser);
-    T(parse_rule) rule = CAL(get_rule, token);
+    SC_Token token = sc_parser_prev(parser);
+    SC_ParseRule rule = sc_get_rule(token);
 
-    return CAL(expression, parser, (T(precedence))(rule.lbp));
+    return sc_expression(parser, (SC_Precedence)(rule.lbp));
 }
 
-FUN(NUM_TYPE, unary, T(parser) *parser)
+NUM_TYPE sc_unary(SC_Parser *parser)
 {
-    T(token) token = CAL(parser_prev, parser);
+    SC_Token token = sc_parser_prev(parser);
     NUM_TYPE result = 0;
 
     switch (token.type) {
         case SC_PLUS:
-            result = CAL(expression, parser, SC_PREC_UNARY);
+            result = sc_expression(parser, SC_PREC_UNARY);
             if (result < 0) result *= -1;
             break;
         case SC_HYPHEN:
-            result = -CAL(expression, parser, SC_PREC_UNARY);
+            result = -sc_expression(parser, SC_PREC_UNARY);
             break;
         case SC_END:
             fprintf(stderr, "ERROR: Expression isn't complete\n");
@@ -414,16 +420,16 @@ FUN(NUM_TYPE, unary, T(parser) *parser)
     return result;
 }
 
-FUN(NUM_TYPE, grouping, T(parser) *parser)
+NUM_TYPE sc_grouping(SC_Parser *parser)
 {
-    T(token) token = CAL(parser_prev, parser);
-    T(parse_rule) rule = CAL(get_rule, token);
-    NUM_TYPE num = CAL(expression, parser, (T(precedence))(rule.lbp));
+    SC_Token token = sc_parser_prev(parser);
+    SC_ParseRule rule = sc_get_rule(token);
+    NUM_TYPE num = sc_expression(parser, (SC_Precedence)(rule.lbp));
 
     if (parser->error) return 0;
 
-    if (CAL(parser_consume, parser).type != SC_RPAREN) {
-        token = CAL(parser_prev, parser);
+    if (sc_parser_consume(parser).type != SC_RPAREN) {
+        token = sc_parser_prev(parser);
 
         if (token.type == SC_END) {
             fprintf(stderr, "ERROR: Expresssion isn't complete\n"); 
@@ -439,21 +445,21 @@ FUN(NUM_TYPE, grouping, T(parser) *parser)
     return num;
 }
 
-FUN(NUM_TYPE, identifier, T(parser) *parser)
+NUM_TYPE sc_identifier(SC_Parser *parser)
 {
     (void)(parser);
     return 0;
 }
 
-FUN(NUM_TYPE, parse, T(token_list) *token_list)
+NUM_TYPE sc_parse(SC_TokenList *token_list)
 {
     if (token_list->count <= 1) return 0;
 
-    T(parser) parser = CAL(parser_new, token_list);
-    NUM_TYPE result = CAL(expression, &parser, SC_PREC_NONE);
+    SC_Parser parser = sc_parser_new(token_list);
+    NUM_TYPE result = sc_expression(&parser, SC_PREC_NONE);
 
     if (parser.error) {
-        T(token) token = CAL(parser_prev, &parser);
+        SC_Token token = sc_parser_prev(&parser);
         if (token.type == SC_END) {
             fprintf(stderr, "ERROR: Parsing failed\n");
         }
@@ -470,16 +476,16 @@ NUM_TYPE sc_calculate(const char *text, int len)
 {
     if (text == NULL || len == 0) return 0;
 
-    T(token_list) token_list = {0};
-    T(lexer) lexer = CAL(lexer_new, text, len < 0 ? strlen(text) : (size_t)len);
+    SC_TokenList token_list = {0};
+    SC_Lexer lexer = sc_lexer_new(text, len < 0 ? strlen(text) : (size_t)len);
 
-    if (!CAL(tokenize, &lexer, &token_list)) {
+    if (!sc_tokenize(&lexer, &token_list)) {
         fprintf(stderr, "ERROR: Tokenization failed\n");
         sc_list_delete(token_list);
         return 0;
     }
 
-    NUM_TYPE result = CAL(parse, &token_list);
+    NUM_TYPE result = sc_parse(&token_list);
     sc_list_delete(token_list);
 
     return result;
@@ -487,17 +493,8 @@ NUM_TYPE sc_calculate(const char *text, int len)
 
 #undef SC_REALLOC
 #undef SC_FREE
-#undef FUN
-#undef CAL
-#undef ENUM
-#undef T
 #undef TOKEN_LEN
-#undef sc_list_define
 #undef sc_list_append
 #undef sc_list_delete
-#undef sc_is_alpha
-#undef sc_is_num
-#undef sc_is_alnum
-#undef sc_is_space
 
 #endif // SIMPLE_CALC_IMPLEMENTATION
