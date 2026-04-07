@@ -66,7 +66,7 @@ typedef struct {
     SC_TokenType type;
 } SC_Token;
 
-#define TOKEN_LEN(token) ((int)((token).end - (token).begin + 1))
+#define SC_TOKEN_LEN(token) ((int)((token).end - (token).begin + 1))
 
 typedef struct {\
     SC_Token *items;
@@ -340,7 +340,7 @@ NUM_TYPE sc_expression(SC_Parser *parser, SC_Precedence prec)
     SC_ParseRule rule = sc_get_rule(token);
 
     if (rule.prefix == NULL) {
-        fprintf(stderr, "ERROR: token '%.*s' shouldn't be here\n", TOKEN_LEN(token), token.begin);
+        fprintf(stderr, "ERROR: token '%.*s' shouldn't be here\n", SC_TOKEN_LEN(token), token.begin);
         parser->error = true;
         return 0;
     }
@@ -353,7 +353,7 @@ NUM_TYPE sc_expression(SC_Parser *parser, SC_Precedence prec)
         rule = sc_get_rule(token);
 
         if (rule.infix == NULL) {
-            fprintf(stderr, "ERROR: token '%.*s' shouldn't be here\n", TOKEN_LEN(token), token.begin);
+            fprintf(stderr, "ERROR: token '%.*s' shouldn't be here\n", SC_TOKEN_LEN(token), token.begin);
             parser->error = true;
             return 0;
         }
@@ -367,7 +367,7 @@ NUM_TYPE sc_expression(SC_Parser *parser, SC_Precedence prec)
             case SC_SLASH : left = left / right; break;
             case SC_CARRET: left = pow(left, right); break;
             default:
-                fprintf(stderr, "ERROR: Unknown token type: '%.*s'\n", TOKEN_LEN(token), token.begin);
+                fprintf(stderr, "ERROR: Unknown token type: '%.*s'\n", SC_TOKEN_LEN(token), token.begin);
                 parser->error = true;
                 return 0;
         }
@@ -380,8 +380,8 @@ NUM_TYPE sc_num(SC_Parser *parser)
 {
     SC_Token token = sc_parser_prev(parser);
     char *endptr;
-    char temp[TOKEN_LEN(token) + 1];
-    sprintf(temp, "%.*s", TOKEN_LEN(token), token.begin);
+    char temp[SC_TOKEN_LEN(token) + 1];
+    sprintf(temp, "%.*s", SC_TOKEN_LEN(token), token.begin);
 
     return strtod(temp, &endptr);
 }
@@ -412,7 +412,7 @@ NUM_TYPE sc_unary(SC_Parser *parser)
             parser->error = true;
             break;
         default:
-            fprintf(stderr, "Unkown unary operator '%.*s'", TOKEN_LEN(token), token.begin);
+            fprintf(stderr, "Unkown unary operator '%.*s'", SC_TOKEN_LEN(token), token.begin);
             parser->error = true;
             break;
     }
@@ -435,7 +435,7 @@ NUM_TYPE sc_grouping(SC_Parser *parser)
             fprintf(stderr, "ERROR: Expresssion isn't complete\n"); 
         }
         else {
-            fprintf(stderr, "ERROR: expected ')' but got '%.*s'\n", TOKEN_LEN(token), token.begin); 
+            fprintf(stderr, "ERROR: expected ')' but got '%.*s'\n", SC_TOKEN_LEN(token), token.begin); 
         }
 
         parser->error = true;
@@ -464,7 +464,7 @@ NUM_TYPE sc_parse(SC_TokenList *token_list)
             fprintf(stderr, "ERROR: Parsing failed\n");
         }
         else {
-            fprintf(stderr, "ERROR: Parsing failed at '%.*s'\n", TOKEN_LEN(token), token.begin);
+            fprintf(stderr, "ERROR: Parsing failed at '%.*s'\n", SC_TOKEN_LEN(token), token.begin);
         }
         return 0;
     }
@@ -493,7 +493,7 @@ NUM_TYPE sc_calculate(const char *text, int len)
 
 #undef SC_REALLOC
 #undef SC_FREE
-#undef TOKEN_LEN
+#undef SC_TOKEN_LEN
 #undef sc_list_append
 #undef sc_list_delete
 
