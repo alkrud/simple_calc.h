@@ -27,22 +27,22 @@ NUM_TYPE sc_calculate(const char *text, int len); // -1 for null terminated stri
     #define SC_FREE(ptr) free(ptr)
 #endif
 
-#define sc_list_append(list, item)\
-    do {\
-        if ((list).count >= (list).capacity) {\
-            (list).capacity = (list).capacity < 64 ? 64 : (list).capacity * 2;\
-            (list).items = SC_REALLOC((list).items, sizeof(*(list).items) * (list).capacity);\
-        }\
-        (list).items[(list).count] = item;\
-        (list).count += 1;\
+#define sc_list_append(list, item)                                                            \
+    do {                                                                                      \
+        if ((list).count >= (list).capacity) {                                                \
+            (list).capacity = (list).capacity < 64 ? 64 : (list).capacity * 2;                \
+            (list).items = SC_REALLOC((list).items, sizeof(*(list).items) * (list).capacity); \
+        }                                                                                     \
+        (list).items[(list).count] = item;                                                    \
+        (list).count += 1;                                                                    \
     } while (0)
 
-#define sc_list_delete(list) \
-    do {\
-        SC_FREE((list).items);\
-        (list).items = NULL;\
-        (list).count = 0;\
-        (list).capacity = 0;\
+#define sc_list_delete(list)   \
+    do {                       \
+        SC_FREE((list).items); \
+        (list).items = NULL;   \
+        (list).count = 0;      \
+        (list).capacity = 0;   \
     } while (0)
 
 typedef enum {
