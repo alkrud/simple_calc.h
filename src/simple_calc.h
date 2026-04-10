@@ -491,10 +491,6 @@ NUM_TYPE sc_calculate(const char *text, int len)
     return result;
 }
 
-#undef SC_REALLOC
-#undef SC_FREE
 #undef SC_TOKEN_LEN
-#undef sc_list_append
-#undef sc_list_delete
 
 #endif // SIMPLE_CALC_IMPLEMENTATION
