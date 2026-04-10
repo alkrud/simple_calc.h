@@ -1,3 +1,4 @@
+#include <string.h>
 #define SIMPLE_CALC_IMPLEMENTATION
 #include "simple_calc.h"
 #include "stdio.h"
@@ -32,32 +33,56 @@ typedef struct {
     double answer;
 } TestCase;
 
-bool get_test_cases(TestCase* *output, size_t *count)
+typedef struct {
+    TestCase *items;
+    size_t count;
+    size_t capacity;
+} TestList;
+
+bool get_test_cases(TestList *output)
 {
+    if (!output) return false;
     for (size_t i = 0; i < test_cases_len; i++) {
-        size_t k = 0;
         const char *str = test_cases[i];
-        for (; test_cases[i] 
+        if (!str) continue;
+        const size_t str_len = strlen(str);
+        if (str_len == 0) continue;
+        size_t k;
+        for (k = 0; str[k] != '#'; k++);
+        if (k == 0) continue;
+        char *input = malloc(sizeof(char) * (k + 1));
+        memcpy(input, str, k);
+        input[k] = '\0';
+        k += 1;
+        if (k >= str_len) {
+            free(input);
+            return false;
+        };
+        TestCase test;
+        test.input = input;
+        test.answer = strtod(&str[k], NULL);
+        sc_list_append(*output, test);
     }
+
+    return output->count > 0;
 }
 
 int main(void)
 {
     size_t success = 0;
 
-    TestCase *cases;
-    size_t total;
+    TestList cases = {0};
 
-    if (!get_test_cases(&cases, &total)) {
+    if (!get_test_cases(&cases)) {
         fprintf(stderr, "Failed to get test cases\n");
         return 1;
     }
 
-    for (size_t i = 0; i < total; i++) {
-        EXPECTED(cases[i].input, cases[i].answer);
+    for (size_t i = 0; i < cases.count; i++) {
+        EXPECTED(cases.items[i].input, cases.items[i].answer);
     }
 
-    printf("%zu out of %zu tests succeeded\n", success, total);
+    printf("%zu out of %zu tests succeeded\n", success, cases.count);
 
     return 0;
 }
