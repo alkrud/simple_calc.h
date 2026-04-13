@@ -14,12 +14,6 @@
     #define NUM_TYPE double
 #endif // NUM_TYPE
 
-NUM_TYPE sc_calculate(const char *text, int len); // -1 for null terminated string
-
-#endif // SIMPLE_CALCULATOR_H_
-
-#ifdef SIMPLE_CALC_IMPLEMENTATION
-
 #ifndef SC_REALLOC
     #define SC_REALLOC(ptr, sz) realloc(ptr, sz)
 #endif
@@ -44,6 +38,12 @@ NUM_TYPE sc_calculate(const char *text, int len); // -1 for null terminated stri
         (list).count = 0;      \
         (list).capacity = 0;   \
     } while (0)
+
+NUM_TYPE sc_calculate(const char *text, int len); // <0 for null terminated string
+
+#endif // SIMPLE_CALCULATOR_H_
+
+#ifdef SIMPLE_CALC_IMPLEMENTATION
 
 typedef enum {
     SC_NUM,
